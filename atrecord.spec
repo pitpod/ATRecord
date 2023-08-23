@@ -19,6 +19,7 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
+a.datas += [('./atr.png', './atr.png', 'DATA')]
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
@@ -26,7 +27,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='atrecord',
+    name='勤怠表',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -46,5 +47,11 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='atrecord',
+    name='勤怠表',
+)
+app = BUNDLE(
+    coll,
+    name='勤怠表.app',
+    icon='./atr.png',
+    bundle_identifier=None,
 )

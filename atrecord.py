@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-import sqlite3
+# import sqlite3
 import pandas as pd
 import datetime as dt
 import openpyxl
 import calendar
 import chardet
-import locale
+# import locale
 
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font
 
-from PyQt5 import QtCore
+# from PyQt5 import QtCore
 from PyQt5.QtWidgets import QMainWindow, QFileDialog, QMessageBox
 from PyQt5.QtWidgets import QApplication, QTableWidgetItem
-from PyQt5.QtGui import QIcon, QColor, QPainter
+# from PyQt5.QtGui import QIcon, QColor, QPainter
 
 from datetime import datetime
 from datetime import date
@@ -43,10 +43,24 @@ class Application(QMainWindow):
         self.ui.pushButton_2.clicked.connect(lambda:self.excel_write(self.df))
         self.ui.pushButton_3.clicked.connect(lambda:self.pdf_write(self.df))
 
+        self.ui.action_F.triggered.connect(lambda: self.csv_read())
+        self.ui.action_F.triggered.connect(lambda: self.excel_write())
+        self.ui.action_P.triggered.connect(lambda: self.pdf_write())
+        self.ui.action_B.triggered.connect(lambda: self.version("バージョン：1.0.0"))
+
+    def version(self, ms_text):
+        msgBox = QMessageBox()
+        msgBox.setText(ms_text)
+        msgBox.setIcon(QMessageBox.Icon.Information)
+        msgBox.setStandardButtons(QMessageBox.Ok)
+        msgBox.exec_()
+
     def csv_read(self):
         fname = QFileDialog.getOpenFileName(self, 'Open file', '')
         filepath = fname[0]
-        self.ui.listWidget.addItem(filepath)
+        if filepath == "":
+            return "break"
+        # self.ui.listWidget.addItem(filepath)
         with open(filepath, 'rb') as f:
             c = f.read()
             result = chardet.detect(c)
@@ -54,8 +68,8 @@ class Application(QMainWindow):
             file_encoding = 'CP932'
         else:
             file_encoding = result['encoding']
-        self.df = pd.read_csv(filepath, header=0, skiprows=5, encoding=file_encoding)
-        self.df_pdf = pd.read_csv(filepath, header=None, skiprows=5, encoding=file_encoding)
+        self.df = pd.read_csv(filepath, header=0, skiprows=5, skipfooter=3, encoding=file_encoding)
+        # self.df_pdf = pd.read_csv(filepath, header=None, skiprows=5, encoding=file_encoding)
         self.ui.listWidget.addItem("\t".join(self.df.columns.values))
 
         for index, data in self.df.iterrows():
@@ -93,6 +107,7 @@ class Application(QMainWindow):
             date_col = self.excel_serial + i
             date_row = i + 9
             date_key = str(self.excel_date.excel_date(date_col).date())
+            d_t = pd.to_datetime(date_key)
             df_array = self.df.query('日付 == @date_key')
             if self.df.query('日付 == @date_key').empty == False:
                 start_time = df_array.at[df_array.index[0],"出勤"]
@@ -108,8 +123,11 @@ class Application(QMainWindow):
                 data_row += 1
 
             ws.cell(row=date_row, column=1, value=date_col)
-        save_fname = QFileDialog.getSaveFileName(self, 'Save File', '')
+        year_month = d_t.strftime('%Y%m')
+        save_fname = QFileDialog.getSaveFileName(self, 'Save File', f'{year_month}.xlsx')
         save_filepass = save_fname[0]
+        if save_filepass == "":
+            return "break"
         self.wb.save(save_filepass)
         self.wb.close()
 
@@ -141,13 +159,16 @@ class Application(QMainWindow):
             date_key = f'{self.dt}'
             d_t = pd.to_datetime(date_key)
             week_day = self.get_day_of_week_jp(d_t)
-            date_time = d_t.strftime('%#d日')
+            # date_time = d_t.strftime('%#d日')
+            date_time = d_t.strftime('%d日')
             df_array = datadf.query('日付 == @date_key')
             if datadf.query('日付 == @date_key').empty == False:
                 s_t = pd.to_datetime(df_array.at[df_array.index[0],"出勤"])
-                start_time = s_t.strftime('%#H:%M')
+                # start_time = s_t.strftime('%#H:%M')
+                start_time = s_t.strftime('%H:%M')
                 e_t = pd.to_datetime(df_array.at[df_array.index[0],"退勤"])
-                end_time = e_t.strftime('%#H:%M')
+                # end_time = e_t.strftime('%#H:%M')
+                end_time = e_t.strftime('%H:%M')
                 rest_time = df_array.at[df_array.index[0],"休憩"]
                 rt = timedelta(minutes=int(rest_time))
                 wt = pd.to_datetime(df_array.at[df_array.index[0],'退勤']) - pd.to_datetime(df_array.at[df_array.index[0],'出勤'])
@@ -160,16 +181,21 @@ class Application(QMainWindow):
                 list_row = [f'{date_time}{week_day}', f'{start_time}', f'{end_time}', f'{rest_time}', work_time , remarks]
             else:
                 list_row = [f'{date_time}{week_day}', "", "", "", "", ""]
+
             date_list.append(list_row)
             self.dt = self.dt + timedelta(days=1)
+        
+        year_month = d_t.strftime('%Y%m')
         datadf_full = pd.DataFrame(data=date_list, columns=columns1)
 
         datadf_full['承認'] = ""
         datadf_pdf = datadf_full.T.reset_index().T.values.tolist()
 
         # 縦型A4のCanvasを準備
-        save_pdfname = QFileDialog.getSaveFileName(self, 'Save File', '')
+        save_pdfname = QFileDialog.getSaveFileName(self, 'Save File', f'{year_month}.pdf')
         save_pdfpass = save_pdfname[0]
+        if save_pdfpass == "":
+            return "break"
         cv = canvas.Canvas(save_pdfpass, pagesize=portrait(A4))
         #cv.setLineWidth(5)
         #cv.setDash([5, 5, 5])
@@ -246,7 +272,7 @@ class Application(QMainWindow):
         h, m = divmod(m, 60)
         # return h, m, s
         h = str(h)
-        m = str(m)
+        m = str(f'{m:02}')
         hm = f'{h}:{m}'
         return hm
 
