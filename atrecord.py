@@ -184,7 +184,7 @@ class Application(QMainWindow):
 
             date_list.append(list_row)
             self.dt = self.dt + timedelta(days=1)
-        
+
         year_month = d_t.strftime('%Y%m')
         datadf_full = pd.DataFrame(data=date_list, columns=columns1)
 
